@@ -14,15 +14,15 @@ const jwt = require("jsonwebtoken");
 const errorHandlerMiddleware = require("./middleware/error-handler");
 
 // middleware
+app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.json({ extended: true }));
 app.use(
   cors({
     credentials: true,
-    origin: "http://localhost:4000",
+    origin: "http://localhost:3000",
   })
 );
-app.use(express.json());
 
 app.use("/todos", todos);
 
@@ -30,8 +30,6 @@ app.use(errorHandlerMiddleware);
 const port = process.env.PORT || 4000;
 
 
-
-//////////////////////////////////////////////////////////
 app.get("/", (req, res) => {
   res.send("ok");
 });
@@ -44,7 +42,7 @@ app.get("/user", (req, res) => {
   const payload = jwt.verify(req.cookies.token, process.env.MY_SECRET);
   User.findById(payload.id).then((userData) => {
     if (!userData) {
-      return res.json({});
+      return res.json({msg: 'No user found'});
     }
     res.json({ id: userData._id, email: userData.email });
   });
@@ -106,7 +104,6 @@ app.post("/logout", (req, res) => {
   res.cookie("token", "").send();
 });
 
-/////////////////////////////
 
 const start = async () => {
   try {

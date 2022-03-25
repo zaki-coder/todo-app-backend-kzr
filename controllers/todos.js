@@ -6,8 +6,12 @@ const { createCustomError, CustomAPIError } = require("../errors/custom-errors")
 
 
 const getAllTodos = asyncWrapper(async (req, res) => {
-  const todos = await Todo.find({});
-  res.status(200).json({ todos });
+  try {
+    const todos = await Todo.find({});
+    res.status(200).json({ todos });
+  } catch (err) {
+    console.log(err)
+  }
 });
 
 const createTodo = asyncWrapper(async (req, res) => {

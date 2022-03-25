@@ -7,7 +7,6 @@ const {
   getTodo,
   updateTodo,
   deleteTodo,
-  editTodo,
 } = require("../controllers/todos");
 
 router.route("/").get(getAllTodos).post(createTodo);
