@@ -6,7 +6,6 @@ require("dotenv").config();
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const User = require("./models/user.model");
-
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -24,42 +23,53 @@ app.use(
   })
 );
 
-app.use("/todos", todos);
 
 app.use(errorHandlerMiddleware);
 const port = process.env.PORT || 4000;
 
 
-app.get("/", (req, res) => {
-  res.send("ok");
-});
-
-
-app.get("/user", (req, res) => {
-  if (!req.cookies.token) {
-    return res.json({});
+const auth = (req, res, next) => {
+  const { name, email, password } = req.body;
+  
+  const token = req.cookies.token;
+  if (!token) {
+    return res.sendStatus(403);
   }
-  const payload = jwt.verify(req.cookies.token, process.env.MY_SECRET);
-  User.findById(payload.id).then((userData) => {
-    if (!userData) {
-      return res.json({msg: 'No user found'});
-    }
-    res.json({ id: userData._id, email: userData.email });
-  });
+  try {
+    const data = jwt.verify(token, process.env.MY_SECRET);
+    console.log("cookie data", data);
+    req.userId = data.id;
+    req.userRole = data.role;
+    return next();
+  } catch {
+    return res.sendStatus(403);
+  }
+};
+
+app.use("/todos", auth, todos);
+
+app.get("/users", auth , async (req, res) => {
+  try {
+    const users = await User({});
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(404).json({message: error.message});
+  }
 });
 
-app.post("/register", (req, res) => {
+
+app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   const hashedPassword = bcrypt.hashSync(password, 10);
 
-    const newUser = new User({
+    const newUser = await new User({
       name: name,
       email: email,
       password: hashedPassword,
     });
-    newUser.save().then((userData) => {
+    newUser.save().then((user) => {
       jwt.sign(
-        { id: userData._id, email: userData.email },
+        user.password,
         process.env.MY_SECRET,
         (err, token) => {
           if (err) {
@@ -68,39 +78,56 @@ app.post("/register", (req, res) => {
           } else {
             res
               .cookie("token", token)
-              .json({ id: userData._id, email: userData.email });
+              .json({result: "success", id: user._id, email: user.email });
           }
         }
       );
     });
 });
 
-app.post("/login", (req, res) => {
+
+
+app.post("/login",  (req, res) => {
   const { email, password } = req.body;
-  User.findOne({ email }).then((userData) => {
-    console.log(userData)
-    if (!userData) {
-      return res.json({});
+  User.findOne({ email }).then((user) => {
+    console.log(user)
+    if (!user) {
+      return res.status(403).json({msg: "invalid login"});
+
     }
-    const passOk = bcrypt.compareSync(password, userData.password);
-    if (passOk) {
-      jwt.sign({ id: userData._id, email }, process.env.MY_SECRET, (err, token) => {
-        if (err) {
-          console.log(err);
-          res.sendStatus(500);
-        } else {
-          res
-            .cookie("token", token)
-            .json({ id: userData._id, email: userData.email });
+    const validData = bcrypt.compareSync(password, user.password);
+    console.log(validData)
+    if (validData) {
+      jwt.sign(
+        { id: user._id, email: user.email },
+        process.env.MY_SECRET,
+        (err, token) => {
+          if (err) {
+            console.log(err);
+            res.sendStatus(500);
+          } else {
+            res
+              .cookie("token", token)
+              .json({ id: user._id, email: user.email });
+          }
         }
-      });
+      );
     } else {
       res.sendStatus(401);
     }
   });
 });
 
-app.post("/logout", (req, res) => {
+// app.get("/todos", auth, async (req, res) => {
+//   const todos = await Todo.find({});
+//   res.status(200).json(todos);
+// })
+
+
+
+
+
+app.post("/logout", auth, (req, res) => {
   res.cookie("token", "").send();
 });
 

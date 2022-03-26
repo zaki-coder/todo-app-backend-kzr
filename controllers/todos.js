@@ -18,7 +18,7 @@ const createTodo = asyncWrapper(async (req, res) => {
 
   try {
     const todo = await Todo.create(req.body);
-    res.status(201).json({ todo: todo, msg: 'Created'});
+    res.status(201).json({ todo, msg: 'Created'});
   } catch (err) {
     if (err instanceof mongoose.Error.ValidationError) {
       throw new CustomAPIError(err.message, 422)
