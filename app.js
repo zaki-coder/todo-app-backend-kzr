@@ -118,13 +118,6 @@ app.post("/login",  (req, res) => {
   });
 });
 
-// app.get("/todos", auth, async (req, res) => {
-//   const todos = await Todo.find({});
-//   res.status(200).json(todos);
-// })
-
-
-
 
 
 app.post("/logout", auth, (req, res) => {

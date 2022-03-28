@@ -7,7 +7,7 @@ const { createCustomError, CustomAPIError } = require("../errors/custom-errors")
 
 const getAllTodos = asyncWrapper(async (req, res) => {
   try {
-    const todos = await Todo.find({});
+    const todos = await Todo.find({}).sort({ createdAt: "desc" }).exec();
     res.status(200).json({ todos });
   } catch (err) {
     console.log(err)
@@ -20,11 +20,7 @@ const createTodo = asyncWrapper(async (req, res) => {
     const todo = await Todo.create(req.body);
     res.status(201).json({ todo, msg: 'Created'});
   } catch (err) {
-    if (err instanceof mongoose.Error.ValidationError) {
-      throw new CustomAPIError(err.message, 422)
-    } else {
-      throw err;
-    }
+    res.status(422).json({msg: err.message})
   }
   
 });
@@ -38,6 +34,7 @@ const getTodo = asyncWrapper(async (req, res, next) => {
 
   res.status(200).json({ todo });
 });
+
 const deleteTodo = asyncWrapper(async (req, res, next) => {
   const { id: todoID } = req.params;
   const todo = await Todo.findOneAndDelete({ _id: todoID });
@@ -46,10 +43,14 @@ const deleteTodo = asyncWrapper(async (req, res, next) => {
   }
   res.status(200).json({ todo });
 });
+
 const updateTodo = asyncWrapper(async (req, res, next) => {
   const { id: todoID } = req.params;
 
-  const todo = await Todo.findOneAndUpdate({ _id: todoID }, req.body, {
+  const todo = await Todo.findOne({ _id: todoID }, function(err, todo) {
+    todo.completed = !todo.completed;
+    todo.save();
+  }, {
     new: true,
     runValidators: true,
   });
